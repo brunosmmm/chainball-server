@@ -1,13 +1,20 @@
+import datetime
+
 from django.db import models
+
 from player_registry.models import Player
 
 # Create your models here.
 
 
+class InvalidGameActionError(Exception):
+    """Invalid game action."""
+
+
 class Season(models.Model):
     """A complete season."""
 
-    year = models.SmallIntegerField()
+    year = models.SmallIntegerField(primary_key=True)
     tournaments = models.ManyToManyField(
         "Tournament", related_name="+", blank=True
     )
@@ -73,18 +80,31 @@ class Game(models.Model):
 
     GAME_LIVE = "LIVE"
     GAME_DONE = "DONE"
+    GAME_UPCOMING = "NYET"
 
-    GAME_STATUS = ((GAME_LIVE, "Live"), (GAME_DONE, "Finished"))
-
-    identifier = models.CharField(max_length=16)
-    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
-    events = models.ManyToManyField("GameEvent")
-    players = models.ManyToManyField(Player)
-    duration = models.DurationField("game duration")
-    start_time = models.DateField("game start time")
-    game_status = models.CharField(
-        max_length=4, choices=GAME_STATUS, default=GAME_DONE
+    GAME_STATUS = (
+        (GAME_LIVE, "Live"),
+        (GAME_DONE, "Finished"),
+        (GAME_UPCOMING, "Upcoming"),
     )
+
+    identifier = models.AutoField(primary_key=True)
+    sequence = models.SmallIntegerField("game number", unique=True, default=1)
+    description = models.CharField(max_length=16, blank=True)
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
+    events = models.ManyToManyField("GameEvent", blank=True)
+    players = models.ManyToManyField(Player)
+    duration = models.DurationField(
+        "game duration", default=datetime.timedelta(minutes=20), blank=True
+    )
+    start_time = models.DateTimeField(
+        "game start time", blank=True, default=datetime.datetime.now
+    )
+    game_status = models.CharField(
+        max_length=4, choices=GAME_STATUS, default=GAME_UPCOMING
+    )
+
+    player_order = models.CharField(blank=True, editable=False, max_length=16)
 
     def get_player_names(self):
         """Get players."""
@@ -101,6 +121,35 @@ class Game(models.Model):
                 player_scores[player] += event.get_point_diff()
 
         return player_scores
+
+    def start_game(self, start_time, player_order):
+        """Flag game as started."""
+        if self.game_status == self.GAME_UPCOMING:
+            self.game_status = self.GAME_LIVE
+            self.save()
+        else:
+            raise InvalidGameActionError("cannot start game")
+
+    def stop_game(self, reason, winner, running_time, remaining_time):
+        """Flag game as stopped (finished)."""
+        if self.game_status == self.GAME_LIVE:
+            self.game_status = self.GAME_DONE
+            self.duration = datetime.timedelta(seconds=running_time)
+            self.save()
+        else:
+            raise InvalidGameActionError("cannot stop game")
+
+    def push_event(self, evt_type, evt_data):
+        """Push event."""
+        if self.game_status != self.GAME_LIVE:
+            raise InvalidGameActionError("game is not live")
+
+        # push event
+        self.save()
+
+    def __str__(self):
+        """Get representation."""
+        return "Game {} ({})".format(self.identifier, self.tournament)
 
 
 class GameEvent(models.Model):

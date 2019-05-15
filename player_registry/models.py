@@ -12,9 +12,9 @@ def determine_upload_path(instance, filename):
 class Player(models.Model):
     """Player."""
 
+    username = models.CharField(max_length=20, unique=True, primary_key=True)
     name = models.CharField(max_length=40)
     display_name = models.CharField(max_length=7)
-    username = models.CharField(max_length=20, unique=True)
     email_address = models.EmailField()
     avatar = models.ImageField(upload_to=determine_upload_path, blank=True)
     sfx = models.FileField(
