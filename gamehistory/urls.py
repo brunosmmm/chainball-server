@@ -1,5 +1,4 @@
-from django.urls import path
+"""Game history URLs."""
 
-from . import views
 
-urlpatterns = [path("", views.index, name="index")]
+urlpatterns = []
