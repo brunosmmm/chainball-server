@@ -226,7 +226,7 @@ class Game(models.Model):
 
         # remove last event
         try:
-            evt_id = self._event_history.popleft()
+            evt_id = self._event_history.pop()
         except IndexError:
             # no events to be popped
             raise InvalidGameActionError("no events to undo")
