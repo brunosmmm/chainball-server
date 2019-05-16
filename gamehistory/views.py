@@ -45,7 +45,7 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
             game.start_game(**request.data)
         except InvalidGameActionError as ex:
             # cannot start
-            return Response({"status": "error", "error": ex})
+            return Response({"status": "error", "error": str(ex)})
 
         return Response({"status": "ok"})
 
@@ -56,7 +56,7 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             game.stop_game(**request.data)
         except InvalidGameActionError as ex:
-            return Response({"status": "error", "error": ex})
+            return Response({"status": "error", "error": str(ex)})
 
         return Response({"status": "ok"})
 
@@ -67,7 +67,7 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             game.push_event(**request.data)
         except InvalidGameActionError as ex:
-            return Response({"status": "error", "error": ex})
+            return Response({"status": "error", "error": str(ex)})
 
         return Response({"status": "ok"})
 
@@ -78,7 +78,7 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             game.undo_last_event()
         except InvalidGameActionError as ex:
-            return Response({"status": "error", "error": ex})
+            return Response({"status": "error", "error": str(ex)})
 
         return Response({"status": "ok"})
 
