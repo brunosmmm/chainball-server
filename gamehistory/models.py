@@ -3,6 +3,7 @@ import datetime
 from django.db import models
 
 from player_registry.models import Player
+from annoying.fields import JSONField
 
 # Create your models here.
 
@@ -75,6 +76,67 @@ class PlayerRanking(models.Model):
     games_played = models.ManyToManyField("Game")
 
 
+class GameEvent(models.Model):
+    """Game event."""
+
+    SCORE_CHANGE = "SCORE_CHANGE"
+    SCORE_FORCED = "SCORE_FORCED"
+    COWOUT = "COWOUT"
+    GAME_START = "GAME_START"
+    GAME_END = "GAME_END"
+    GAME_PAUSE = "GAME_PAUSE"
+    GAME_UNPAUSE = "GAME_UNPAUSE"
+    FORCE_SERVE = "FORCE_SERVE"
+    DEADBALL = "DEADBALL"
+    MUDSKIPPER = "MUDSKIPPER"
+    BALL_HIT = "BALL_HIT"
+    SAILORMOON = "SAILORMOON"
+    CHAINBALL = "CHAINBALL"
+    JAILBREAK = "JAILBREAK"
+    FAULT = "FAULT"
+    DOUBLEFAULT = "DOUBLEFAULT"
+    SLOWPOKE = "SLOWPOKE"
+    SERVE_ADVANCE = "SERVE_ADVANCE"
+
+    GAME_EVENTS = (
+        (SAILORMOON, "Sailor Moon"),
+        (MUDSKIPPER, "Mudskipper"),
+        (BALL_HIT, "Self hit"),
+        (DOUBLEFAULT, "Double fault"),
+        (DEADBALL, "Dead ball"),
+        (CHAINBALL, "Chainball"),
+        (JAILBREAK, "Jailbreak"),
+        (SLOWPOKE, "Slow poke"),
+        (COWOUT, "Cow out"),
+        (SCORE_CHANGE, "score changed"),
+        (SCORE_FORCED, "score forced"),
+        (COWOUT, "cow out"),
+        (GAME_START, "game start"),
+        (GAME_END, "game end"),
+        (GAME_PAUSE, "game paused"),
+        (GAME_UNPAUSE, "game unpaused"),
+        (FORCE_SERVE, "force serve"),
+        (SERVE_ADVANCE, "serve advanced"),
+    )
+
+    EVENT_SCORE_DIFF = {
+        SAILORMOON: -2,
+        MUDSKIPPER: -1,
+        BALL_HIT: -1,
+        DOUBLEFAULT: -1,
+        DEADBALL: 0,
+        CHAINBALL: 1,
+        JAILBREAK: 2,
+    }
+
+    event = models.CharField(max_length=16, choices=GAME_EVENTS)
+    data = JSONField(blank=True)
+
+    def get_point_diff(self):
+        """Get point differential"""
+        return self.EVENT_SCORE_DIFF[str(self.event)]
+
+
 class Game(models.Model):
     """Chainball game."""
 
@@ -89,10 +151,10 @@ class Game(models.Model):
     )
 
     identifier = models.AutoField(primary_key=True)
-    sequence = models.SmallIntegerField("game number", unique=True, default=1)
+    sequence = models.SmallIntegerField("game number", default=1)
     description = models.CharField(max_length=16, blank=True)
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
-    events = models.ManyToManyField("GameEvent", blank=True)
+    events = models.ManyToManyField(GameEvent, blank=True)
     players = models.ManyToManyField(Player)
     duration = models.DurationField(
         "game duration", default=datetime.timedelta(minutes=20), blank=True
@@ -144,58 +206,12 @@ class Game(models.Model):
         if self.game_status != self.GAME_LIVE:
             raise InvalidGameActionError("game is not live")
 
-        # push event
+        # create new event
+        new_event = GameEvent(event=evt_type, data=evt_data)
+        new_event.save()
+        self.events.add(new_event)
         self.save()
 
     def __str__(self):
         """Get representation."""
         return "Game {} ({})".format(self.identifier, self.tournament)
-
-
-class GameEvent(models.Model):
-    """Game event."""
-
-    SAILOR_MOON = "SM"
-    MUD_SKIPPER = "MS"
-    SELF_HIT = "SH"
-    DOUBLE_FAULT = "DF"
-    DEAD_BALL = "DB"
-    CHAIN_BALL = "CB"
-    JAIL_BREAK = "JB"
-    COW_OUT = "CO"
-    SLOW_POKE = "SP"
-
-    GAME_EVENTS = (
-        (SAILOR_MOON, "Sailor Moon"),
-        (MUD_SKIPPER, "Mudskipper"),
-        (SELF_HIT, "Self hit"),
-        (DOUBLE_FAULT, "Double fault"),
-        (DEAD_BALL, "Dead ball"),
-        (CHAIN_BALL, "Chainball"),
-        (JAIL_BREAK, "Jailbreak"),
-        (SLOW_POKE, "Slow poke"),
-        (COW_OUT, "Cow out"),
-    )
-
-    EVENT_SCORE_DIFF = {
-        SAILOR_MOON: -2,
-        MUD_SKIPPER: -1,
-        SELF_HIT: -1,
-        DOUBLE_FAULT: -1,
-        DEAD_BALL: 0,
-        CHAIN_BALL: 1,
-        JAIL_BREAK: 2,
-    }
-
-    # game = models.ForeignKey(Game, on_delete=models.CASCADE)
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    event = models.CharField(max_length=2, choices=GAME_EVENTS)
-    game_time = models.SmallIntegerField()
-
-    def get_point_diff(self):
-        """Get point differential"""
-        return self.EVENT_SCORE_DIFF[str(self.event)]
-
-    def get_player(self):
-        """Get player."""
-        return self.player

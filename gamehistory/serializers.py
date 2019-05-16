@@ -1,7 +1,7 @@
 """Serializers for game history data."""
 
 from rest_framework import serializers
-from .models import Tournament, Season, Game
+from .models import Tournament, Season, Game, GameEvent
 
 
 class SeasonSerializer(serializers.HyperlinkedModelSerializer):
@@ -9,7 +9,7 @@ class SeasonSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Season
-        fields = ("year", "tournaments")
+        fields = ("id", "year", "tournaments")
 
 
 class TournamentSerializer(serializers.HyperlinkedModelSerializer):
@@ -18,6 +18,7 @@ class TournamentSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Tournament
         fields = (
+            "id",
             "season",
             "description",
             "event_date",
@@ -43,3 +44,11 @@ class GameSerializer(serializers.HyperlinkedModelSerializer):
             "start_time",
             "game_status",
         )
+
+
+class GameEventSerializer(serializers.HyperlinkedModelSerializer):
+    """Game Event serializer."""
+
+    class Meta:
+        model = GameEvent
+        fields = ("event", "data")

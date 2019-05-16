@@ -1,7 +1,12 @@
 """Game history views."""
 
-from .serializers import TournamentSerializer, SeasonSerializer, GameSerializer
-from .models import Tournament, Season, Game, InvalidGameActionError
+from .serializers import (
+    TournamentSerializer,
+    SeasonSerializer,
+    GameSerializer,
+    GameEventSerializer,
+)
+from .models import Tournament, Season, Game, InvalidGameActionError, GameEvent
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -65,3 +70,11 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"status": "error", "error": ex})
 
         return Response({"status": "ok"})
+
+
+class GameEventViewSet(viewsets.ReadOnlyModelViewSet):
+    """Game event viewset."""
+
+    permission_classes = [HasAPIKey | IsAuthenticated]
+    queryset = GameEvent.objects.all()
+    serializer_class = GameEventSerializer
