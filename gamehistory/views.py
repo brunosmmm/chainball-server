@@ -71,6 +71,17 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response({"status": "ok"})
 
+    @action(detail=True)
+    def undo_last_event(self, request, pk=None):
+        """Undo last event."""
+        game = self.get_object()
+        try:
+            game.undo_last_event()
+        except InvalidGameActionError as ex:
+            return Response({"status": "error", "error": ex})
+
+        return Response({"status": "ok"})
+
 
 class GameEventViewSet(viewsets.ReadOnlyModelViewSet):
     """Game event viewset."""

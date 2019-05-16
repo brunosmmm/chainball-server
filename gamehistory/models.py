@@ -4,6 +4,7 @@ from django.db import models
 
 from player_registry.models import Player
 from annoying.fields import JSONField
+from collections import deque
 
 # Create your models here.
 
@@ -154,7 +155,7 @@ class Game(models.Model):
     sequence = models.SmallIntegerField("game number", default=1)
     description = models.CharField(max_length=16, blank=True)
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
-    events = models.ManyToManyField(GameEvent, blank=True)
+    events = models.ManyToManyField(GameEvent, blank=True, editable=False)
     players = models.ManyToManyField(Player)
     duration = models.DurationField(
         "game duration", default=datetime.timedelta(minutes=20), blank=True
@@ -167,6 +168,11 @@ class Game(models.Model):
     )
 
     player_order = models.CharField(blank=True, editable=False, max_length=16)
+
+    def __init__(self, *args, **kwargs):
+        """Initialize."""
+        super().__init__(*args, **kwargs)
+        self._event_history = deque()
 
     def get_player_names(self):
         """Get players."""
@@ -210,7 +216,31 @@ class Game(models.Model):
         new_event = GameEvent(event=evt_type, data=evt_data)
         new_event.save()
         self.events.add(new_event)
+        self._event_history.append(new_event.id)
         self.save()
+
+    def undo_last_event(self):
+        """Undo last event."""
+        if self.game_status != self.GAME_LIVE:
+            raise InvalidGameActionError("game is not live")
+
+        # remove last event
+        try:
+            evt_id = self._event_history.popleft()
+        except IndexError:
+            # no events to be popped
+            raise InvalidGameActionError("no events to undo")
+
+        # unlink event and destroy
+        evt = GameEvent.objects.get(pk=evt_id)
+        self.events.remove(evt)
+        evt.delete()
+        self.save()
+
+    @property
+    def event_history(self):
+        """Get event history."""
+        return self._event_history.copy()
 
     def __str__(self):
         """Get representation."""
