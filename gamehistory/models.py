@@ -194,6 +194,7 @@ class Game(models.Model):
         """Flag game as started."""
         if self.game_status == self.GAME_UPCOMING:
             self.game_status = self.GAME_LIVE
+            self.player_order = player_order
             self.save()
         else:
             raise InvalidGameActionError("cannot start game")
@@ -216,7 +217,10 @@ class Game(models.Model):
         new_event = GameEvent(event=evt_type, data=evt_data)
         new_event.save()
         self.events.add(new_event)
-        self._event_history.append(new_event.id)
+
+        # event history includes only undoable events!
+        if evt_type in GameEvent.EVENT_SCORE_DIFF:
+            self._event_history.append(new_event.id)
         self.save()
 
     def undo_last_event(self):
