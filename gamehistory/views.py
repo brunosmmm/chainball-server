@@ -12,6 +12,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_api_key.permissions import HasAPIKey
+import logging
+import json
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TournamentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -40,11 +44,17 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"])
     def start_game(self, request, pk=None):
         """Flag game as live."""
+        LOGGER.info("Trying to flag game as started...")
         game = self.get_object()
         try:
-            game.start_game(**request.data)
+            request_data = json.loads(request.data["payload"])
+        except (KeyError, json.JSONDecodeError):
+            return Response({"status": "error", "error": "malformed request"})
+        try:
+            game.start_game(**request_data)
         except InvalidGameActionError as ex:
             # cannot start
+            LOGGER.error(f"Cannot start game: {ex}")
             return Response({"status": "error", "error": str(ex)})
 
         return Response({"status": "ok"})
@@ -54,7 +64,11 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
         """Flag game as done."""
         game = self.get_object()
         try:
-            game.stop_game(**request.data)
+            request_data = json.loads(request.data["payload"])
+        except (KeyError, json.JSONDecodeError):
+            return Response({"status": "error", "error": "malformed request"})
+        try:
+            game.stop_game(**request_data)
         except InvalidGameActionError as ex:
             return Response({"status": "error", "error": str(ex)})
 
@@ -65,8 +79,13 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
         """Push event."""
         game = self.get_object()
         try:
-            game.push_event(**request.data)
+            request_data = json.loads(request.data["payload"])
+        except (KeyError, json.JSONDecodeError):
+            return Response({"status": "error", "error": "malformed request"})
+        try:
+            game.push_event(**request_data)
         except InvalidGameActionError as ex:
+            LOGGER.error(f"ERROR: Cannot push event: {ex}")
             return Response({"status": "error", "error": str(ex)})
 
         return Response({"status": "ok"})
