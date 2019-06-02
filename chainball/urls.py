@@ -25,6 +25,8 @@ router.register(r"players", player_registry.views.PlayerViewSet)
 router.register(r"seasons", gamehistory.views.SeasonViewSet)
 router.register(r"games", gamehistory.views.GameViewSet)
 router.register(r"events", gamehistory.views.GameEventViewSet)
+router.register(r"locations", gamehistory.views.TournamentLocationViewSet)
+router.register(r"courts", gamehistory.views.TournamentCourtViewSet)
 
 urlpatterns = [
     path("gamehistory/", include("gamehistory.urls")),

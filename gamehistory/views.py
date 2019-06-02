@@ -5,8 +5,18 @@ from .serializers import (
     SeasonSerializer,
     GameSerializer,
     GameEventSerializer,
+    TournamentLocationSerializer,
+    TournamentCourtSerializer,
 )
-from .models import Tournament, Season, Game, InvalidGameActionError, GameEvent
+from .models import (
+    TournamentCourt,
+    TournamentLocation,
+    Tournament,
+    Season,
+    Game,
+    InvalidGameActionError,
+    GameEvent,
+)
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -24,6 +34,22 @@ class TournamentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [HasAPIKey | IsAuthenticated]
     queryset = Tournament.objects.all()
     serializer_class = TournamentSerializer
+
+
+class TournamentLocationViewSet(viewsets.ReadOnlyModelViewSet):
+    """Tournament location viewset."""
+
+    permission_classes = [HasAPIKey | IsAuthenticated]
+    queryset = TournamentLocation.objects.all()
+    serializer_class = TournamentLocationSerializer
+
+
+class TournamentCourtViewSet(viewsets.ReadOnlyModelViewSet):
+    """Tournament court viewset."""
+
+    permission_classes = [HasAPIKey | IsAuthenticated]
+    queryset = TournamentCourt.objects.all()
+    serializer_class = TournamentCourtSerializer
 
 
 class SeasonViewSet(viewsets.ReadOnlyModelViewSet):

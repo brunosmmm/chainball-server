@@ -1,6 +1,7 @@
 import datetime
 
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from player_registry.models import Player
 from annoying.fields import JSONField
@@ -24,6 +25,27 @@ class Season(models.Model):
     def __str__(self):
         """Get representation."""
         return str(self.year)
+
+
+class TournamentLocation(models.Model):
+    """Tournament location."""
+
+    name = models.CharField(max_length=40)
+
+    def __str__(self):
+        """Get representation."""
+        return self.name
+
+
+class TournamentCourt(models.Model):
+    """Game court."""
+
+    number = models.SmallIntegerField()
+    location = models.ForeignKey(TournamentLocation, on_delete=models.PROTECT)
+
+    def __str__(self):
+        """Get representation."""
+        return "{} court {}".format(self.location, self.number)
 
 
 class Tournament(models.Model):
@@ -50,6 +72,7 @@ class Tournament(models.Model):
     ranking = models.ManyToManyField(
         "PlayerRanking", related_name="tournament_ranking", blank=True
     )
+    location = models.ForeignKey(TournamentLocation, on_delete=models.PROTECT)
 
     def get_champion(self):
         """Get tournament champion."""
@@ -144,11 +167,13 @@ class Game(models.Model):
     GAME_LIVE = "LIVE"
     GAME_DONE = "DONE"
     GAME_UPCOMING = "NYET"
+    GAME_NEXT = "NEXT"
 
     GAME_STATUS = (
         (GAME_LIVE, "Live"),
         (GAME_DONE, "Finished"),
         (GAME_UPCOMING, "Upcoming"),
+        (GAME_NEXT, "Next"),
     )
 
     identifier = models.AutoField(primary_key=True)
@@ -168,11 +193,32 @@ class Game(models.Model):
     )
 
     player_order = models.CharField(blank=True, editable=False, max_length=16)
+    court = models.ForeignKey(
+        TournamentCourt,
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        default=None,
+    )
 
     def __init__(self, *args, **kwargs):
         """Initialize."""
         super().__init__(*args, **kwargs)
         self._event_history = deque()
+
+    def clean(self):
+        """Validate."""
+        if self.court_id is not None:
+            if self.court.location != self.tournament.location:
+                raise ValidationError(
+                    "Court location must be the same as tournament location." ""
+                )
+        super().clean()
+
+    def save(self):
+        """Save."""
+        self.clean()
+        super().save()
 
     def get_player_names(self):
         """Get players."""
@@ -195,6 +241,7 @@ class Game(models.Model):
         if self.game_status == self.GAME_UPCOMING:
             self.game_status = self.GAME_LIVE
             self.player_order = player_order
+            self.start_time = datetime.datetime.now()
             self.save()
         else:
             raise InvalidGameActionError("cannot start game")

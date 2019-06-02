@@ -14,8 +14,11 @@ def determine_upload_path(instance, filename):
 class Player(models.Model):
     """Player."""
 
-    username = models.CharField(max_length=20, unique=True, primary_key=True)
+    username = models.SlugField(max_length=20, unique=True, primary_key=True)
     name = models.CharField(max_length=40)
+    codename = models.CharField(
+        max_length=40, null=True, blank=True, default=None
+    )
     display_name = models.CharField(max_length=7)
     email_address = models.EmailField()
     avatar = models.ImageField(upload_to=determine_upload_path, blank=True)
@@ -25,7 +28,14 @@ class Player(models.Model):
 
     def __str__(self):
         """Get representation."""
-        return self.name
+        name_components = self.name.split(" ")
+        first_name = name_components[0]
+        last_name = " ".join(name_components[1:])
+        if self.codename is not None:
+            codename = f' "{self.codename}"'
+        else:
+            codename = ""
+        return f"{first_name}{codename} {last_name}"
 
     @property
     def sfx_md5(self):

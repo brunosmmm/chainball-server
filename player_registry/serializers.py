@@ -9,4 +9,4 @@ class PlayerSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Player
-        fields = ("name", "display_name", "username", "sfx_md5")
+        fields = ("name", "display_name", "codename", "username", "sfx_md5")
