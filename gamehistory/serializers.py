@@ -53,6 +53,10 @@ class GameSerializer(serializers.HyperlinkedModelSerializer):
             "game_status",
             "player_order",
             "court",
+            "p0_score",
+            "p1_score",
+            "p2_score",
+            "p3_score",
         )
 
 

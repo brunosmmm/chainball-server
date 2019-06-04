@@ -160,6 +160,16 @@ class GameEvent(models.Model):
         """Get point differential"""
         return self.EVENT_SCORE_DIFF[str(self.event)]
 
+    def get_player(self):
+        """Get player."""
+        return self.data.get("player")
+
+
+def validate_game_score(score):
+    """Validate score."""
+    if score < -10 or score > 5:
+        raise ValidationError("invalid score value")
+
 
 class Game(models.Model):
     """Chainball game."""
@@ -201,6 +211,19 @@ class Game(models.Model):
         default=None,
     )
 
+    p0_score = models.SmallIntegerField(
+        "Player #1 score", default=0, validators=[validate_game_score]
+    )
+    p1_score = models.SmallIntegerField(
+        "Player #2 score", default=0, validators=[validate_game_score]
+    )
+    p2_score = models.SmallIntegerField(
+        "Player #3 score", default=0, validators=[validate_game_score]
+    )
+    p3_score = models.SmallIntegerField(
+        "Player #4 score", default=0, validators=[validate_game_score]
+    )
+
     def __init__(self, *args, **kwargs):
         """Initialize."""
         super().__init__(*args, **kwargs)
@@ -211,8 +234,12 @@ class Game(models.Model):
         if self.court_id is not None:
             if self.court.location != self.tournament.location:
                 raise ValidationError(
-                    "Court location must be the same as tournament location." ""
+                    "Court location must be the same as tournament location."
                 )
+        # if self.game_status not in ("NYET", "NEXT") and (
+        #     self.players.count() < 2 or self.players.count() > 4
+        # ):
+        #     raise ValidationError("Unsupported player count")
         super().clean()
 
     def save(self):
@@ -227,14 +254,23 @@ class Game(models.Model):
     def get_scores(self):
         """Generate score from events."""
         player_scores = {}
-        for event in self.events.all():
-            player = event.get_player().name
+        for event_id in self._event_history:
+            event = GameEvent.objects.get(id=event_id)
+            player = event.get_player()
             if player not in player_scores:
                 player_scores[player] = event.get_point_diff()
             else:
                 player_scores[player] += event.get_point_diff()
 
         return player_scores
+
+    def _refresh_scores(self):
+        scores = self.get_scores()
+        for pnum, pscore in scores.items():
+            try:
+                setattr(self, f"p{pnum}_score", pscore)
+            except AttributeError:
+                continue
 
     def start_game(self, start_time, player_order):
         """Flag game as started."""
@@ -268,6 +304,8 @@ class Game(models.Model):
         # event history includes only undoable events!
         if evt_type in GameEvent.EVENT_SCORE_DIFF:
             self._event_history.append(new_event.id)
+
+        self._refresh_scores()
         self.save()
 
     def undo_last_event(self):
@@ -286,7 +324,14 @@ class Game(models.Model):
         evt = GameEvent.objects.get(pk=evt_id)
         self.events.remove(evt)
         evt.delete()
+        self._refresh_scores()
         self.save()
+
+    @property
+    def player_order_list(self):
+        """Get player order."""
+        order_str = self.player_order
+        return [pstr.strip() for pstr in order_str.split(",")]
 
     @property
     def event_history(self):
