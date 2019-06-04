@@ -224,10 +224,7 @@ class Game(models.Model):
         "Player #4 score", default=0, validators=[validate_game_score]
     )
 
-    def __init__(self, *args, **kwargs):
-        """Initialize."""
-        super().__init__(*args, **kwargs)
-        self._event_history = deque()
+    event_history = JSONField(null=True, blank=True, editable=False)
 
     def clean(self):
         """Validate."""
@@ -253,8 +250,13 @@ class Game(models.Model):
 
     def get_scores(self):
         """Generate score from events."""
-        player_scores = {}
-        for event_id in self._event_history:
+        player_scores = {0: 0, 1: 0, 2: 0, 3: 0}
+        if self.event_history is None:
+            return player_scores
+        history = self.event_history.get("history")
+        if history is None:
+            return player_scores
+        for event_id in history:
             event = GameEvent.objects.get(id=event_id)
             player = event.get_player()
             if player not in player_scores:
@@ -262,6 +264,7 @@ class Game(models.Model):
             else:
                 player_scores[player] += event.get_point_diff()
 
+        print(player_scores)
         return player_scores
 
     def _refresh_scores(self):
@@ -303,7 +306,15 @@ class Game(models.Model):
 
         # event history includes only undoable events!
         if evt_type in GameEvent.EVENT_SCORE_DIFF:
-            self._event_history.append(new_event.id)
+            if self.event_history is None:
+                self.event_history = {}
+            history = self.event_history.get("history")
+            if history is None:
+                _history = [new_event.id]
+                self.event_history["history"] = _history
+            else:
+                history.append(new_event.id)
+                self.event_history["history"] = history
 
         self._refresh_scores()
         self.save()
@@ -314,11 +325,12 @@ class Game(models.Model):
             raise InvalidGameActionError("game is not live")
 
         # remove last event
-        try:
-            evt_id = self._event_history.pop()
-        except IndexError:
-            # no events to be popped
+        history = self.event_history.get("history")
+        if history is None or not history:
             raise InvalidGameActionError("no events to undo")
+
+        del history[-1]
+        self.event_history["history"] = history
 
         # unlink event and destroy
         evt = GameEvent.objects.get(pk=evt_id)
@@ -334,7 +346,7 @@ class Game(models.Model):
         return [pstr.strip() for pstr in order_str.split(",")]
 
     @property
-    def event_history(self):
+    def game_event_history(self):
         """Get event history."""
         return self._event_history.copy()
 
