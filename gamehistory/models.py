@@ -167,7 +167,7 @@ class GameEvent(models.Model):
 
 def validate_game_score(score):
     """Validate score."""
-    if score < -10 or score > 5:
+    if score < -10 or score > 6:
         raise ValidationError("invalid score value")
 
 
