@@ -264,7 +264,6 @@ class Game(models.Model):
             else:
                 player_scores[player] += event.get_point_diff()
 
-        print(player_scores)
         return player_scores
 
     def _refresh_scores(self):
