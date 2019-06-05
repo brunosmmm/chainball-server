@@ -29,7 +29,7 @@ if DEBUG is False:
 else:
     SECRET_KEY = "blabla"
 
-ALLOWED_HOSTS = ["chainball.online", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = [".chainball.online", "localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
     "live_tournament.apps.LiveTournamentConfig",
@@ -127,7 +127,7 @@ REST_FRAMEWORK = {
     )
 }
 
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -136,3 +136,4 @@ CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 60
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+STATIC_ROOT = os.path.join(BASE_DIR, "static/")
