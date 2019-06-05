@@ -276,7 +276,7 @@ class Game(models.Model):
 
     def start_game(self, start_time, player_order):
         """Flag game as started."""
-        if self.game_status == self.GAME_UPCOMING:
+        if self.game_status in (self.GAME_UPCOMING, self.GAME_NEXT):
             self.game_status = self.GAME_LIVE
             self.player_order = player_order
             self.start_time = datetime.datetime.now()
