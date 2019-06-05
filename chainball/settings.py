@@ -19,11 +19,15 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "blabla"
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+
+if DEBUG is False:
+    # SECURITY WARNING: keep the secret key used in production secret!
+    with open("/etc/secret_key.txt") as f:
+        SECRET_KEY = f.read().strip()
+else:
+    SECRET_KEY = "blabla"
 
 ALLOWED_HOSTS = []
 
