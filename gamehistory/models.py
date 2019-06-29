@@ -351,4 +351,4 @@ class Game(models.Model):
 
     def __str__(self):
         """Get representation."""
-        return "Game {} ({})".format(self.identifier, self.tournament)
+        return "Game {} ({})".format(self.sequence, self.tournament)
