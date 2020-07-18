@@ -27,6 +27,7 @@ router.register(r"games", gamehistory.views.GameViewSet)
 router.register(r"events", gamehistory.views.GameEventViewSet)
 router.register(r"locations", gamehistory.views.TournamentLocationViewSet)
 router.register(r"courts", gamehistory.views.TournamentCourtViewSet)
+router.register(r"announce", gamehistory.views.AnnounceViewSet)
 
 urlpatterns = [
     path("gamehistory/", include("gamehistory.urls")),

@@ -171,6 +171,24 @@ def validate_game_score(score):
         raise ValidationError("invalid score value")
 
 
+class GameAnnounce(models.Model):
+    """Dummy class to initiate chainbot announcements."""
+
+    identifier = models.AutoField(primary_key=True)
+    players = models.ManyToManyField(Player)
+    court = models.ForeignKey(
+        TournamentCourt,
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        default=None,
+    )
+
+    # def __str__(self):
+    #     """Get representation."""
+    #     return "Court call"
+
+
 class Game(models.Model):
     """Chainball game."""
 

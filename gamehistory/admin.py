@@ -5,6 +5,7 @@ from .models import (
     Tournament,
     Season,
     Game,
+    GameAnnounce,
 )
 
 from django import forms
@@ -51,3 +52,4 @@ admin.site.register(Season)
 admin.site.register(Game, GameAdmin)
 admin.site.register(TournamentLocation)
 admin.site.register(TournamentCourt)
+admin.site.register(GameAnnounce)

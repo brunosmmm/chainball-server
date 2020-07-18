@@ -7,6 +7,7 @@ from .serializers import (
     GameEventSerializer,
     TournamentLocationSerializer,
     TournamentCourtSerializer,
+    GameAnnounceSerializer,
 )
 from .models import (
     TournamentCourt,
@@ -134,3 +135,11 @@ class GameEventViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [HasAPIKey | IsAuthenticated]
     queryset = GameEvent.objects.all()
     serializer_class = GameEventSerializer
+
+
+class AnnounceViewSet(viewsets.ReadOnlyModelViewSet):
+    """Announce view set."""
+
+    permission_classes = [HasAPIKey | IsAuthenticated]
+    queryset = GameAnnounce.objects.all()
+    serializer_class = GameAnnounceSerializer

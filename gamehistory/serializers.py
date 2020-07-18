@@ -8,6 +8,7 @@ from .models import (
     Season,
     Game,
     GameEvent,
+    GameAnnounce,
 )
 
 
@@ -82,3 +83,11 @@ class TournamentCourtSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = TournamentCourt
         fields = ("number", "location")
+
+
+class GameAnnounceSerializer(serializers.HyperlinkedModelSerializer):
+    """Announce serializer."""
+
+    class Meta:
+        model = GameAnnounce
+        fields = ("identifier", "players", "court")
