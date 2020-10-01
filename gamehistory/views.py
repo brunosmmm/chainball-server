@@ -17,6 +17,7 @@ from .models import (
     Game,
     InvalidGameActionError,
     GameEvent,
+    GameAnnounce,
 )
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
