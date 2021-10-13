@@ -24,8 +24,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_api_key.permissions import HasAPIKey
+from .chainbotipc import ScoreboardIPCClient
 import logging
 import json
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+channel_layer = get_channel_layer()
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +86,9 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"status": "error", "error": "malformed request"})
         try:
             game.start_game(**request_data)
+            async_to_sync(channel_layer.group_send)(
+                "chainbot_slv", {"type": "slv.start", "data": request_data}
+            )
         except InvalidGameActionError as ex:
             # cannot start
             LOGGER.error(f"Cannot start game: {ex}")
@@ -97,6 +106,9 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"status": "error", "error": "malformed request"})
         try:
             game.stop_game(**request_data)
+            async_to_sync(channel_layer.group_send)(
+                "chainbot_slv", {"type": "slv.stop", "data": request_data}
+            )
         except InvalidGameActionError as ex:
             return Response({"status": "error", "error": str(ex)})
 
@@ -112,6 +124,9 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"status": "error", "error": "malformed request"})
         try:
             game.push_event(**request_data)
+            async_to_sync(channel_layer.group_send)(
+                "chainbot_slv", {"type": "slv.event", "data": request_data}
+            )
         except InvalidGameActionError as ex:
             LOGGER.error(f"ERROR: Cannot push event: {ex}")
             return Response({"status": "error", "error": str(ex)})
@@ -138,7 +153,7 @@ class GameEventViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = GameEventSerializer
 
 
-class AnnounceViewSet(viewsets.ReadOnlyModelViewSet):
+class AnnounceViewSet(viewsets.ModelViewSet):
     """Announce view set."""
 
     permission_classes = [HasAPIKey | IsAuthenticated]
