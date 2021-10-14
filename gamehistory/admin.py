@@ -20,7 +20,9 @@ class GameForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """Initialize."""
         super().__init__(*args, **kwargs)
-        self.fields["players"].disabled = True
+        self.fields["entries"].widget = forms.CheckboxSelectMultiple(
+            choices=self.fields["entries"].choices
+        )
         if self.fields["game_status"] in ("DONE", "LIVE"):
             # disallow editing of player list
             self.fields["court"].disabled = True
@@ -44,6 +46,8 @@ class GameForm(forms.ModelForm):
     def clean(self):
         """Clean."""
         cleaned_data = super().clean()
+        if len(cleaned_data["entries"]) > 4:
+            raise forms.ValidationError("Only up to 4 players are allowed")
         # tournament_games = cleaned_data["tournament"].get_game_id_list()
         # game_seq = cleaned_data["sequence"]
         # if game_seq in tournament_games:
@@ -56,6 +60,7 @@ class GameForm(forms.ModelForm):
 class GameAdmin(admin.ModelAdmin):
     """Game Admin form."""
 
+    exclude = ("players",)
     list_display = ("sequence", "tournament", "start_time")
     list_filter = ("tournament", "start_time")
     actions = ["announce_games", "reset_announce_state"]
@@ -142,13 +147,13 @@ class TournamentForm(forms.ModelForm):
         """Initialize."""
         super().__init__(*args, **kwargs)
         self.fields["ranking"].disabled = True
-        self.fields["players"].disabled = True
         self.fields["games"].disabled = True
 
 
 class TournamentAdmin(admin.ModelAdmin):
     """Tournament Admin form."""
 
+    exclude = ("players",)
     list_display = ("description", "season", "location", "event_date")
     form = TournamentForm
 
