@@ -118,7 +118,7 @@ class GameAdmin(admin.ModelAdmin):
         # set games as next
         for game in queryset:
             try:
-                game.set_next()
+                game.set_next(announce=True)
             except InvalidGameActionError:
                 self.message_user(
                     request,

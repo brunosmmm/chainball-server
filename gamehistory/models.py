@@ -245,7 +245,7 @@ class GameAnnounce(models.Model):
     """Dummy class to initiate chainbot announcements."""
 
     identifier = models.AutoField(primary_key=True)
-    players = models.ManyToManyField(Player)
+    players = models.ManyToManyField(Player, blank=True, related_name="+")
     court = models.ForeignKey(
         TournamentCourt,
         on_delete=models.PROTECT,
@@ -399,13 +399,20 @@ class Game(models.Model):
         else:
             raise InvalidGameActionError("game is already queued")
 
-    def set_next(self):
+    def set_next(self, announce=False):
         """Flag game as next."""
         if self.game_status == self.GAME_UPCOMING:
             self.game_status = self.GAME_NEXT
             self.save()
         else:
             raise InvalidGameActionError("cannot stop game")
+
+        if announce is True:
+            _announce = GameAnnounce(court=self.court)
+            _announce.save()
+            for player in self.players.all():
+                _announce.players.add(player)
+            _announce.save()
 
     def reset_state(self):
         """Reset state to upcoming."""
