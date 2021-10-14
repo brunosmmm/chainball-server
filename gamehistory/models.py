@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 
 from player_registry.models import Player
 from annoying.fields import JSONField
-from collections import deque
 
 # Create your models here.
 
@@ -31,6 +30,9 @@ class TournamentLocation(models.Model):
     """Tournament location."""
 
     name = models.CharField(max_length=40)
+    courts = models.ManyToManyField(
+        "TournamentCourt", related_name="+", blank=True
+    )
 
     def __str__(self):
         """Get representation."""
@@ -46,6 +48,12 @@ class TournamentCourt(models.Model):
     def __str__(self):
         """Get representation."""
         return "{} court {}".format(self.location, self.number)
+
+    def save(self):
+        """Save."""
+        self.clean()
+        super().save()
+        self.location.courts.add(self)
 
 
 class Tournament(models.Model):
@@ -70,7 +78,11 @@ class Tournament(models.Model):
         max_length=4, choices=TOURNAMENT_STATUS, default=TOURNAMENT_UPCOMING
     )
     ranking = models.ManyToManyField(
-        "PlayerRanking", related_name="tournament_ranking", blank=True
+        "PlayerRanking",
+        related_name="tournament_ranking",
+        blank=True,
+        verbose_name="Player entries",
+        help_text="Player entries with associated tournament player number",
     )
     location = models.ForeignKey(TournamentLocation, on_delete=models.PROTECT)
 
@@ -89,15 +101,73 @@ class Tournament(models.Model):
         """Get representation."""
         return "{} {}".format(self.season, self.description)
 
+    def get_game_id_list(self):
+        """Get game list."""
+        return [game.sequence for game in self.games.all()]
+
+    def get_player_count(self):
+        """Get player count."""
+        return len(self.ranking.all())
+
+    def get_player_tids(self):
+        """Get registered player by tournament ID."""
+        return [player.player_tid for player in self.ranking.all()]
+
+    def get_participating_players(self):
+        """Get registered and participating players."""
+        return [player.player for player in self.ranking.all()]
+
+    def save(self):
+        """Save."""
+        self.clean()
+        self.players.clear()
+        for player in self.get_participating_players():
+            self.players.add(player)
+        super().save()
+
 
 class PlayerRanking(models.Model):
     """Player ranking in tournament."""
 
     player = models.ForeignKey(Player, on_delete=models.PROTECT)
     tournament = models.ForeignKey(Tournament, on_delete=models.PROTECT)
-    victory_points = models.PositiveSmallIntegerField()
-    raw_points = models.SmallIntegerField()
-    games_played = models.ManyToManyField("Game")
+    victory_points = models.PositiveSmallIntegerField(default=0)
+    raw_points = models.SmallIntegerField(default=0)
+    games_played = models.ManyToManyField("Game", blank=True)
+    player_tid = models.SmallIntegerField(
+        default=1,
+        verbose_name="Player number",
+        help_text="Tournament player number",
+    )
+
+    class Meta:
+        """Adjust stuff."""
+
+        verbose_name = "player entry"
+        verbose_name_plural = "player entries"
+
+    def save(self):
+        """Save."""
+        tournament_player_count = self.tournament.get_player_count()
+        registered_tids = self.tournament.get_player_tids()
+        registered_players = self.tournament.get_participating_players()
+        if self.player in registered_players:
+            raise ValidationError(
+                f"Player {self.player.name} already registered for tournament"
+            )
+        if self.player_tid <= tournament_player_count:
+            self.player_tid = tournament_player_count + 1
+        if self.player_tid in registered_tids:
+            raise ValidationError(
+                f"Player number {self.player_tid} is already registered"
+            )
+        # automatically number if necessary
+        super().save()
+        self.tournament.ranking.add(self)
+
+    def __str__(self):
+        """Get string representation."""
+        return f"({self.tournament}) {self.player_tid} - {self.player.name}"
 
 
 class GameEvent(models.Model):
@@ -209,7 +279,7 @@ class Game(models.Model):
     description = models.CharField(max_length=16, blank=True)
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
     events = models.ManyToManyField(GameEvent, blank=True, editable=False)
-    players = models.ManyToManyField(Player)
+    players = models.ManyToManyField(Player, blank=True)
     duration = models.DurationField(
         "game duration", default=datetime.timedelta(minutes=20), blank=True
     )
@@ -227,6 +297,13 @@ class Game(models.Model):
         blank=True,
         null=True,
         default=None,
+    )
+
+    entries = models.ManyToManyField(
+        "PlayerRanking",
+        related_name="tournament_entry",
+        verbose_name="Player entries",
+        help_text="Player entries with associated tournament player number",
     )
 
     p0_score = models.SmallIntegerField(
@@ -260,7 +337,18 @@ class Game(models.Model):
     def save(self):
         """Save."""
         self.clean()
+        # if self.sequence in self.tournament.get_game_id_list():
+        #     raise ValidationError("Game # already in tournament")
         super().save()
+        self.players.clear()
+        for player in self.get_participating_players():
+            self.players.add(player)
+        super().save()
+        self.tournament.games.add(self)
+
+    def get_participating_players(self):
+        """Get participating players."""
+        return [entry.player for entry in self.entries.all()]
 
     def get_player_names(self):
         """Get players."""
@@ -309,7 +397,20 @@ class Game(models.Model):
             self.duration = datetime.timedelta(seconds=running_time)
             self.save()
         else:
+            raise InvalidGameActionError("game is already queued")
+
+    def set_next(self):
+        """Flag game as next."""
+        if self.game_status == self.GAME_UPCOMING:
+            self.game_status = self.GAME_NEXT
+            self.save()
+        else:
             raise InvalidGameActionError("cannot stop game")
+
+    def reset_state(self):
+        """Reset state to upcoming."""
+        self.game_status = self.GAME_UPCOMING
+        self.save()
 
     def push_event(self, evt_type, evt_data):
         """Push event."""
