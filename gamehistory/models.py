@@ -120,6 +120,7 @@ class Tournament(models.Model):
     def save(self):
         """Save."""
         self.clean()
+        super().save()
         self.players.clear()
         for player in self.get_participating_players():
             self.players.add(player)
