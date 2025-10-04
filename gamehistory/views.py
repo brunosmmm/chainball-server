@@ -138,7 +138,7 @@ class GameEventViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = GameEventSerializer
 
 
-class AnnounceViewSet(viewsets.ReadOnlyModelViewSet):
+class AnnounceViewSet(viewsets.ModelViewSet):
     """Announce view set."""
 
     permission_classes = [HasAPIKey | IsAuthenticated]

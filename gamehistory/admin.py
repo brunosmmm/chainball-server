@@ -61,7 +61,7 @@ class GameAdmin(admin.ModelAdmin):
     """Game Admin form."""
 
     exclude = ("players",)
-    list_display = ("sequence", "tournament", "start_time")
+    list_display = ("description", "sequence", "tournament", "start_time")
     list_filter = ("tournament", "start_time")
     actions = ["announce_games", "reset_announce_state"]
     form = GameForm
