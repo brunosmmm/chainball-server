@@ -91,3 +91,4 @@ class GameAnnounceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = GameAnnounce
         fields = ("identifier", "players", "court")
+        read_only_fields = ("identifier",)
